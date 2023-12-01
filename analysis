@@ -1,0 +1,237 @@
+import pandas as pd
+import seaborn as sns
+
+
+
+# List of numerical columns for box plots
+numerical_columns = ['visit_num', 'recency', 'monthly_visits', 'monetary', 'disct_perc', 'quantity', 'usr_age']
+
+
+melted_df = pd.melt(df, id_vars=['target'], value_vars=numerical_columns)
+
+# Create box plots using Seaborn
+plt.figure(figsize=(12, 8))
+sns.boxplot(x='variable', y='value', hue='target', data=melted_df)
+plt.title('Boxplot of Numerical Columns for Purchasers vs. Non-Purchasers')
+plt.xlabel('Numerical Columns')
+plt.ylabel('Values')
+plt.xticks(rotation=45)
+plt.legend(title='Target', loc='upper right')
+plt.show()
+
+
+import plotly.express as px
+
+# Create box plots using Plotly
+fig = px.box(df, x='target', y=numerical_columns, points="all", title='Boxplot of Numerical Columns for Purchasers vs. Non-Purchasers')
+fig.update_layout(xaxis={'title': 'Target'}, yaxis={'title': 'Values'})
+fig.show()
+
+
+# Histograms for numerical columns
+for col in numerical_columns:
+    plt.figure(figsize=(8, 6))
+    sns.histplot(df[col], kde=True)
+    plt.title(f'Histogram of {col}')
+    plt.xlabel(col)
+    plt.ylabel('Frequency')
+    plt.show()
+
+
+
+# Count plot for categorical variable 'usr_gender'
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df, x='usr_gender')
+plt.title('Count of Visitors by Gender')
+plt.xlabel('Gender')
+plt.ylabel('Count')
+plt.show()
+
+
+# Compute correlation matrix
+corr_matrix = df.corr()
+
+# Plot correlation matrix using heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Correlation Matrix')
+plt.show()
+
+# Pairplot for numerical columns
+sns.pairplot(df[numerical_columns])
+plt.title('Pairplot of Numerical Columns')
+plt.show()
+
+# Creating a box plot to compare visit_num between purchasers (target=1) and non-purchasers (target=0)
+plt.figure(figsize=(8, 6))
+sns.boxplot(x='target', y='visit_num', data=df)
+plt.title('Number of Visits vs. Target')
+plt.xlabel('Target (0: Non-Purchasers, 1: Purchasers)')
+plt.ylabel('Number of Visits')
+plt.show()
+
+# Group data by geo_city and target to count occurrences
+city_target_count = df.groupby(['geo_city', 'target']).size().unstack(fill_value=0)
+
+# Plotting the counts of purchasers (target = 1) and non-purchasers (target = 0) by city
+plt.figure(figsize=(12, 6))
+city_target_count.plot(kind='bar', stacked=True)
+plt.title('Distribution of Purchasers vs. Non-Purchasers by City')
+plt.xlabel('City')
+plt.ylabel('Count')
+plt.legend(['Non-Purchasers', 'Purchasers'])
+plt.xticks(rotation=45, ha='right')  # Rotating x-axis labels for better readability
+plt.tight_layout()
+plt.show()
+
+
+# Convert yyyymmdd column to datetime format
+df['yyyymmdd'] = pd.to_datetime(df['yyyymmdd'], format='%Y%m%d')
+
+# Group data by date and target to count occurrences
+date_target_count = df.groupby(['yyyymmdd', 'target']).size().unstack(fill_value=0)
+
+# Plotting the counts of purchasers (target = 1) and non-purchasers (target = 0) over time
+plt.figure(figsize=(12, 6))
+date_target_count.plot(kind='line', stacked=False)
+plt.title('Purchase Trends Over Time by Target')
+plt.xlabel('Date')
+plt.ylabel('Count')
+plt.legend(['Non-Purchasers', 'Purchasers'])
+plt.grid(True)
+plt.show()
+
+
+# Compute correlation matrix
+corr_matrix = df.corr()
+
+# Plot correlation matrix using heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Correlation Matrix')
+plt.show()
+
+
+
+categorical_column = 'usr_gender'
+
+# Creating count plots for categorical column comparing purchasers vs. non-purchasers
+plt.figure(figsize=(8, 6))
+sns.countplot(x=categorical_column, hue='target', data=df)
+plt.title(f'Count of {categorical_column} for Purchasers vs. Non-Purchasers')
+plt.xlabel(categorical_column)
+plt.ylabel('Count')
+plt.legend(title='Target', loc='upper right')
+plt.show()
+
+# Proportion comparison between purchasers and non-purchasers
+prop_comparison = df.groupby([categorical_column, 'target']).size().unstack()
+prop_comparison['Proportion_Purchasers'] = prop_comparison[1] / (prop_comparison[1] + prop_comparison[0])
+print(prop_comparison)
+
+
+# Assuming 'geo_city' is a categorical column representing city names
+
+# Bar plot showing the count of purchasers and non-purchasers in each city
+plt.figure(figsize=(12, 6))
+sns.countplot(x='geo_city', hue='target', data=df, order=df['geo_city'].value_counts().index)
+plt.title('Count of Purchasers vs. Non-Purchasers in Each City')
+plt.xlabel('City')
+plt.ylabel('Count')
+plt.legend(title='Target', loc='upper right')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Proportion comparison between purchasers and non-purchasers in each city
+prop_comparison_city = df.groupby(['geo_city', 'target']).size().unstack()
+prop_comparison_city['Proportion_Purchasers'] = prop_comparison_city[1] / (prop_comparison_city[1] + prop_comparison_city[0])
+print(prop_comparison_city)
+
+
+
+
+
+---------------
+Cohort Analysis:
+# Calculate user cohort based on their first visit date
+df['FirstVisitDate'] = df.groupby('visitor_id')['yyyymmdd'].transform('min')
+df['Cohort'] = pd.to_datetime(df['FirstVisitDate']).dt.to_period('M')
+
+# Calculate retention rates
+cohorts = df.groupby(['Cohort', 'yyyymmdd'])['visitor_id'].nunique().reset_index()
+initial_users_count = cohorts[cohorts['yyyymmdd'] == cohorts['Cohort']]['visitor_id']
+cohorts['Retention'] = cohorts['visitor_id'] / initial_users_count
+
+# Create a heatmap to visualize retention rates over time
+retention_pivot = cohorts.pivot_table(index='Cohort', columns='yyyymmdd', values='Retention')
+plt.figure(figsize=(12, 8))
+sns.heatmap(retention_pivot, annot=True, cmap='YlGnBu', fmt='.1%')
+plt.title('Cohort Analysis - Retention Rates')
+plt.show()
+
+-----------------
+Customer Segmentation (K-means Clustering):
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+# Select relevant features for clustering
+features = ['monetary', 'monthly_visits', 'recency']
+
+# Standardize the data
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(df[features])
+
+# Determine optimal number of clusters (K)
+# For example, using the Elbow method
+inertia = []
+for k in range(1, 10):
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(scaled_data)
+    inertia.append(kmeans.inertia_)
+
+plt.figure(figsize=(8, 6))
+plt.plot(range(1, 10), inertia, marker='o')
+plt.xlabel('Number of Clusters (K)')
+plt.ylabel('Inertia')
+plt.title('Elbow Method for Optimal K')
+plt.show()
+
+# Based on the Elbow Method, select an appropriate K value and fit KMeans
+kmeans = KMeans(n_clusters=4, random_state=42)
+df['Cluster'] = kmeans.fit_predict(scaled_data)
+
+----------------
+Customer Lifetime Value (CLV) Analysis:
+
+# Calculate CLV by summing monetary values per customer
+clv = df.groupby('visitor_id')['monetary'].sum().reset_index()
+
+# Visualize CLV distribution
+plt.figure(figsize=(8, 6))
+sns.histplot(clv['monetary'], kde=True)
+plt.title('Distribution of Customer Lifetime Value (CLV)')
+plt.xlabel('CLV')
+plt.ylabel('Frequency')
+plt.show()
+
+
+--------------------
+from mlxtend.frequent_patterns import apriori
+from mlxtend.frequent_patterns import association_rules
+
+# Assuming 'visitor_id' as transaction identifier and 'quantity' as quantity purchased
+basket = df.groupby(['visitor_id', 'visid_new'])['quantity'].sum().unstack().fillna(0)
+
+# Convert quantity values to binary (1 if purchased, 0 otherwise)
+basket_sets = basket.applymap(lambda x: 1 if x > 0 else 0)
+
+# Apply Apriori algorithm to find frequent itemsets
+frequent_itemsets = apriori(basket_sets, min_support=0.05, use_colnames=True)
+
+# Generate association rules
+rules = association_rules(frequent_itemsets, metric='lift', min_threshold=1)
+
+# Display association rules
+print(rules)
+
